@@ -43,10 +43,12 @@ def index():
 
 @app.route("/_countem")
 def countem():
-  text = request.args.get("text", type=str)
+  text = request.args.get("text", type=str) #checking the whole word
   length = len(text)
-  rslt = { "long_enough": length > 5 }
-  return jsonify(result=rslt)
+  rslt = { "long_enough": length > 5 } #this is a dictionary cuz javascript object is a dict
+  return jsonify(result=rslt) #jsonify makes the dictionary into a string and send the string version of the dict
+                                #but when you get it back in the html page it's back to being a dict. json just
+                                #makes it into a string for sending it 
 
 #############
 

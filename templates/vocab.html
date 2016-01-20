@@ -84,32 +84,72 @@
     <label for="attempt">Word:</label>
     <input id="attempt" name="attempt" type="text" width="15"
       autocomplete="off"  autofocus />
-    <input type="submit" name="try" />
   </form>
 </div></div>
 
 <br />
 
-{% if session.matches|length is not equalto 0  %}
+<p id="error_message" class="message"></p>
+
 <h2>You found </h2>
-<p id="results">
-  {% for match in session.matches %}
-  {{ match }} 
-  {% endfor %}
-</p>
-{% endif %}
+<p id="results"> </p>
+
+<script>
+//now start javascript code
+
+//get things that flask_vocab sends in session dictionary 
+var target_count = {{session.target_count}};
+var jumble = "{{session.jumble}}"; //might need quotes 
+var success_count = 0;
+var success_list = []
 
 
-{% with messages = get_flashed_messages() %}
-  {% if messages %}
-    <!-- Mismatch, already found, etc. "flashed" from Python -->
-    {% for message in messages %}
-      <p class="message">{{ message }}</p>
-    {% endfor %}
-  {% endif %}
-{% endwith %}
+// suppress letting user press enter key to submit 
+$("#entry").submit( function(event) {
+   event.preventDefault();
+  });
+  
+$("#attempt").keyup(function() {
+   var txt = $("#attempt").val();
+   //First just make sure that the word hasnt already been typed in 
+   if (success_list.indexOf(txt) != -1)
+   {
+        //the user already found this word
+        $("#error_message").html("You have already found the word '" + txt + "'. Try a different word.");
+        return;
+   }
+   $.getJSON( "/_check", { text: txt, jumble: jumble }, //this is the AJAX call. again here you see a dictionary being passed as input cuz this is json and you also get a dict back
+              function(data) {
+                legal = data.result.in_jumble;
+                matched = data.result.matched;
+                console.log("legal: " + legal)
+                console.log("matched: " + matched)
+                if (!legal) 
+                {
+                    $("#error_message").html("You have typed in an invalid character.");
+                } 
+                else if (matched) 
+                {
+                    $("#error_message").html("");
+                    success_list.push(txt);
+                    success_count++;
+                    $("#attempt").val("");
+                    $("#results").append(txt + " ");
+                    if (success_count >= target_count)
+                    {
+                        window.location.replace("success");
+                    }
+                }
+                else
+                {
+                    //have to wait to see what rest of word the user types is 
+                    $("#error_message").html("");
+                }
+               }
+           );
+   });
 
-
+</script>
 
  </div> <!-- container -->
 </body> </html>
