@@ -54,7 +54,7 @@
   -->
 <div class="row">
   {% for word in g.vocab %}
-    <div class="col-xs-2 text-center"> {{ word }} </div>
+    <div id="{{word}}" class="col-xs-2 text-center"> {{ word }} </div>
     {% if loop.index is divisibleby 3 %}
     </div> <!-- row -->
     <div class="row">
@@ -97,11 +97,12 @@
 <script>
 //now start javascript code
 
-//get things that flask_vocab sends in session dictionary 
+//get things that flask_vocab sends in session dictionary & set up variables
 var target_count = {{session.target_count}};
-var jumble = "{{session.jumble}}"; //might need quotes 
+var jumble = "{{session.jumble}}";  
 var success_count = 0;
-var success_list = []
+var success_list = [];
+var word_list = {{g.vocab|safe}};
 
 
 // suppress letting user press enter key to submit 
@@ -111,22 +112,34 @@ $("#entry").submit( function(event) {
   
 $("#attempt").keyup(function() {
    var txt = $("#attempt").val();
+   
    //First just make sure that the word hasnt already been typed in 
    if (success_list.indexOf(txt) != -1)
    {
         //the user already found this word
         $("#error_message").html("You have already found the word '" + txt + "'. Try a different word.");
+        //unhighlight all words
+        for (var i=0; i<word_list.length; i++)
+        {
+            var characters = document.getElementById(word_list[i]);
+            characters.style.backgroundColor = "transparent";
+        }
         return;
    }
-   $.getJSON( "/_check", { text: txt, jumble: jumble }, //this is the AJAX call. again here you see a dictionary being passed as input cuz this is json and you also get a dict back
+   
+   $.getJSON( "/_check", { text: txt, jumble: jumble }, //this is the AJAX call. 
               function(data) {
                 legal = data.result.in_jumble;
                 matched = data.result.matched;
+                highlight_list = data.result.highlight_list;
                 console.log("legal: " + legal)
                 console.log("matched: " + matched)
+                console.log("highlight list: " + highlight_list)
                 if (!legal) 
                 {
                     $("#error_message").html("You have typed in an invalid character.");
+                    var txt_len = txt.length;
+                    $("#attempt").val(txt.substring(0,(txt_len-1)));
                 } 
                 else if (matched) 
                 {
@@ -135,6 +148,14 @@ $("#attempt").keyup(function() {
                     success_count++;
                     $("#attempt").val("");
                     $("#results").append(txt + " ");
+                    
+                    //unhighlight all words
+                    for (var i=0; i<word_list.length; i++)
+                    {
+                        var characters = document.getElementById(word_list[i]);
+                        characters.style.backgroundColor = "transparent";
+                    }
+                    
                     if (success_count >= target_count)
                     {
                         window.location.replace("success");
@@ -142,8 +163,24 @@ $("#attempt").keyup(function() {
                 }
                 else
                 {
-                    //have to wait to see what rest of word the user types is 
+                    //have to wait and see what the user types in 
                     $("#error_message").html("");
+                    //if a word in the vocab list contains all the letters from the text 
+                    //then highlight it. Else, unhighlight it.
+                    for (var i=0; i<word_list.length; i++)
+                    {
+                        console.log(word_list[i])
+                        if ((highlight_list.indexOf(word_list[i]) != -1) && txt!="")
+                        {
+                            var characters = document.getElementById(word_list[i]);
+                            characters.style.backgroundColor = "yellow";
+                        }
+                        else
+                        {
+                            var characters = document.getElementById(word_list[i]);
+                            characters.style.backgroundColor = "transparent";
+                        }
+                    }
                 }
                }
            );
@@ -153,3 +190,4 @@ $("#attempt").keyup(function() {
 
  </div> <!-- container -->
 </body> </html>
+

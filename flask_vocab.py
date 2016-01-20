@@ -80,22 +80,20 @@ def success():
   return flask.render_template('success.html')
 
 #######################
-# Form handler.  
-# CIS 322 (399se) note:
-#   You'll need to change this to a
-#   a JSON request handler
+# JSON request handler
 #######################
 
 @app.route("/_check")
 def check():
   """
-  CURRENTLY THIS IS AS IF CHECKING A WHOLE WORD 
-  User has submitted the form with a word ('attempt')
-  that should be formed from the jumble and on the
-  vocabulary list.  We respond depending on whether
-  the word is on the vocab list (therefore correctly spelled),
-  made only from the jumble letters, and not a word they
-  already found.
+  The user has pressed a key. We respond by sending back 2 
+  booleans and 1 list. The first boolean we send back is whether 
+  all the characters in the text that the user has typed in so far
+  are in the jumble/anagram word. The second boolean we send back
+  is whether the text the user has typed in so far is a word that is 
+  in the list of vocabulary words. Lastly, we send back a list of all 
+  the words in the vocabulary list that contain all the letters that 
+  have been typed so far by the user. 
   """
   app.logger.debug("Entering check")
   
@@ -103,12 +101,17 @@ def check():
   jumble = request.args.get("jumble", type=str)
   
   ## Is it good? 
-  in_jumble = LetterBag(jumble).contains(text) #all letters are in the anagram word
-  matched = WORDS.has(text) #the text he gave is in the list of words
+  in_jumble = LetterBag(jumble).contains(text) #all letters are in the jumble/anagram word
+  matched = WORDS.has(text) #the text is a word that is in the list of vocab words
   
-  rslt = { "in_jumble": in_jumble, "matched": matched } #this is a dictionary cuz javascript object is a dict
+  highlight_list = []
+  for word in WORDS.as_list():
+    if (LetterBag(word).contains(text)):
+        highlight_list.append(word)
+  
+  rslt = { "in_jumble": in_jumble, "matched": matched, "highlight_list": highlight_list } 
   return jsonify(result=rslt)
-  
+
 
 
 ###############
@@ -144,18 +147,18 @@ def format_filt( something ):
 @app.errorhandler(404)
 def error_404(e):
   app.logger.warning("++ 404 error: {}".format(e))
-  return render_template('404.html'), 404
+  return flask.render_template('404.html'), 404
 
 @app.errorhandler(500)
 def error_500(e):
    app.logger.warning("++ 500 error: {}".format(e))
    assert app.debug == False #  I want to invoke the debugger
-   return render_template('500.html'), 500
+   return flask.render_template('500.html'), 500
 
 @app.errorhandler(403)
 def error_403(e):
   app.logger.warning("++ 403 error: {}".format(e))
-  return render_template('403.html'), 403
+  return flask.render_template('403.html'), 403
 
 
 
@@ -174,7 +177,6 @@ if __name__ == "__main__":
 else:
     # Running from cgi-bin or from gunicorn WSGI server, 
     # which makes the call to app.run.  Gunicorn may invoke more than
-    # one instance for concurrent service.
-    #FIXME:  Debug cgi interface 
+    # one instance for concurrent service. 
     app.debug=False
 
